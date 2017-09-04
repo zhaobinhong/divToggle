@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>jQuery文章章节平滑切换动画特效</title>
+    <link rel="stylesheet" type="text/css" href="css/default.css">
+    <link rel="stylesheet" type="text/css" href="css/styles.css">
+</head>
+<body>
+<main>
+    <section class="main">
+        <div class="container mainContent">
+            <div class="zzsc">
+                <h1>jQuery文章章节平滑切换动画特效</h1>
+            </div>
+            <p>
+                // 发生偏移，但基向量不变；
+                transform:translate(x,y) ==> transform:matrix(1,0,0,1,x,y)
+
+                // 基向量旋转；
+                transform:rotate(θdeg)==> transform:matrix(cos(θ·π/180),sin(θ·π/180),-sin(θ·π/180),cos(θ·π/180),0,0)
+
+                // 基向量放大且方向不变；
+                transform:scale(s) ==> transform:matrix(s,0,0,s,0,0)
+                translate/rotate/scale等语法十分强大，让我们的代码更为可读且方便书写，但是matrix有着更强大的转换特性，通过matrix，可以发生任何方式的变换，例如我们常见的镜像对称，transform:matrix(-1,0,0,1,0,0);
+
+                4292507316-5984806781903_articlex
+
+                MatrixTo
+
+                然而matrix虽然强大，但可读性却不好，而且我们的写入是通过translate/rotate/scale的属性,然而通过getComputedStyle读取到的 transform却是matrix:
+
+                transform:matrix(1.41421, 1.41421, -1.41421, 1.41421, -50, -50);
+                请问这个元素发生了怎么样的变化?。。这就一脸懵逼了。-_-|||
+
+                因此，我们必须要有个方法，来将matrix翻译成我们更为熟悉的translate/rotate/scale方式，在理解了其原理后，我们便可以着手开始表演咯~
+
+                我们知道，前4个参数会同时受到rotate和scale的影响，具有两个变量，因此需要通过前两个参数根据上面的转换方式列出两个不等式：
+
+                cos(θ·π/180)*s=1.41421;
+
+                sin(θ·π/180)*s=1.41421;
+                将两个不等式相除，即可以轻松求出θ和s了，perfect！！函数如下：
+
+                1996102881-5984807d26d7f_articlex
+
+                手势原理
+
+                接下来我们将上面的函数用到实际环境中，通过图示的方式来模拟手势的操作，简要地讲解手势计算的原理。希望各位大神理解这些基础的原理后，能创造出更多炫酷的手势，像我们在mac触控板上使用的一样。
+
+                下面图例：
+
+                圆点: 代表手指的触碰点;
+
+                两个圆点之间的虚线段: 代表双指操作时组成的向量;
+
+                a向量/A点：代表在 touchstart 时获取的初始向量/初始点；
+
+                b向量/B点：代表在 touchmove 时获取的实时向量/实时点；
+
+                坐标轴底部的公式代表需要计算的值；
+                Drag(拖动事件)
+
+                602224203-5984808fdd5cf_articlex
+
+                上图是模拟了拖动手势，由A点移动到B点，我们要计算的便是这个过程的偏移量；
+
+                因此我们在touchstart中记录初始点A的坐标：
+
+
+                // 获取初始点A；
+                let startPoint = getPoint(ev,0);
+                1
+                2
+                // 获取初始点A；
+                let startPoint = getPoint(ev,0);
+                然后在touchmove事件中获取当前点并实时的计算出△x与△y：
+
+
+                // 实时获取初始点B；
+                let curPoint = getPoint(ev,0);
+
+                // 通过A、B两点，实时的计算出位移增量，触发 drag 事件并传出参数；
+                _eventFire('drag', {
+                delta: {
+                deltaX: curPoint.x - startPoint.x,
+                deltaY: curPoint.y - startPoint.y,
+                },
+                origin: ev,
+                });
+
+                // 实时获取初始点B；
+                let curPoint = getPoint(ev,0);
+
+                // 通过A、B两点，实时的计算出位移增量，触发 drag 事件并传出参数；
+                _eventFire('drag', {
+                delta: {
+                deltaX: curPoint.x - startPoint.x,
+                deltaY: curPoint.y - startPoint.y,
+                },
+                origin: ev,
+                });
+                Tips: fire函数即遍历执行drag事件对应的回调仓库即可；</p>
+
+
+            <button class="about">About</button>
+        </div>
+    </section>
+</main>
+
+<section class="aboutSection">
+    <div class="container aboutContent">
+
+        <h1>About</h1>
+
+        <p>
+            众所周知，所有的手势都是基于浏览器原生事件touchstart, touchmove, touchend, touchcancel进行的上层封装，因此封装的思路是通过一个个相互独立的事件回调仓库handleBus，然后在原生touch事件中符合条件的时机触发并传出计算后的参数值，完成手势的操作。实现原理较为简单清晰，先不急，我们先来理清一些使用到的数学概念并结合代码，将数学运用到实际问题中，数学部分可能会比较枯燥，但希望大家坚持读完，相信会收益良多。
+
+            基础数学知识函数
+
+            我们常见的坐标系属于线性空间，或称向量空间(Vector Space)。这个空间是一个由点(Point) 和 向量(Vector) 所组成集合；
+
+            点(Point)
+
+            可以理解为我们的坐标点,例如原点O(0,0),A(-1,2)，通过原生事件对象的touches可以获取触摸点的坐标，参数index代表第几接触点；104625946-59847e999911a_articlex
+
+
+
+            向量(Vector)
+
+            是坐标系中一种 既有大小也有方向的线段，例如由原点O(0,0)指向点A(1,1)的箭头线段，称为向量a，则a=(1-0,1-0)=(1,1);
+
+            如下图所示，其中i与j向量称为该坐标系的单位向量，也称为基向量，我们常见的坐标系单位为1,即i=(1,0)；j=(0,1)；
+
+            1358258230-59847ed4a6e63_articlex
+
+            获取向量的函数：3755500458-59847ef1bc2ba_articlex
+
+
+
+            向量模
+
+            代表 向量的长度，记为|a|，是一个标量，只有大小，没有方向;
+
+            几何意义代表的是以x,y为直角边的直角三角形的斜边，通过勾股定理进行计算；
+
+            1893784804-59847f0835cd5_articlex
+
+            getLength函数：
+
+            3924861912-59847f1f13487_articlex
+
+            向量的数量积
+
+            向量同样也具有可以运算的属性，它可以进行加、减、乘、数量积和向量积等运算，接下来就介绍下我们使用到的数量积这个概念，也称为点积，被定义为公式：
+
+            当a=(x1,y1),b=(x2,y2)，则a·b=|a|·|b|·cosθ=x1·x2+y1·y2；
+            共线定理
+
+            共线，即两个向量处于 平行 的状态，当a=(x1,y1),b=(x2,y2)，则存在唯一的一个实数λ，使得a=λb，代入坐标点后，可以得到 x1·y2= y1·x2;
+
+            因此当x1·y2-x2·y1>0 时，既斜率 ka > kb ，所以此时b向量相对于a向量是属于顺时针旋转，反之，则为逆时针；
+
+            旋转角度
+
+            通过数量积公式我们可以推到求出两个向量的夹角：
+
+            cosθ=(x1·x2+y1·y2)/(|a|·|b|);
+            然后通过共线定理我们可以判断出旋转的方向，函数定义为：
+
+            2839618888-59847f36e65f4_articlex
+
+            矩阵与变换
+
+            由于空间最本质的特征就是其可以容纳运动，因此在线性空间中，
+
+            我们用向量来刻画对象，而矩阵便是用来描述对象的运动；
+            而矩阵是如何描述运动的呢?
+
+            我们知道，通过一个坐标系基向量便可以确定一个向量，例如 a=(-1,2),我们通常约定的基向量是 i = (1,0) 与 j = (0,1)； 因此:</p>
+
+
+        <button class="home">Home</button>
+
+    </div>
+</section>
+
+<script src="js/jquery-2.1.1.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+$(function () {
+	'use strict';
+	var main = $('.main'), about = $('.aboutSection');
+	$('.about').click(function () {
+		main.animate({
+			'height': '0',
+			'top': '50vh',
+			'padding': '0'
+		}, 300).animate({
+			'width': '2px',
+			'left': '50%'
+		}, 900).fadeOut(200, function () {
+			about.fadeIn(200);
+			about.animate({
+				'width': '100%',
+				'left': '0'
+			}, 900);
+			about.animate({
+				'min-height': '100vh',
+				'top': '0',
+				'padding-top': '50px',
+				'padding-bottom': '50px'
+			}, 300);
+		});
+	});
+	$('.home').click(function () {
+		about.animate({
+			'min-height': '0',
+			'height': '0',
+			'top': '50vh',
+			'padding': '0'
+		}, 300).animate({
+			'width': '2px',
+			'left': '50%'
+		}, 900).fadeOut(200, function () {
+			main.fadeIn(200).animate({
+				'width': '100%',
+				'left': '0'
+			}, 900).animate({
+				'height': '100vh',
+				'top': '0',
+				'padding-top': '100px',
+				'padding-bottom': '100px'
+			}, 300);
+		});
+	});
+});
+
+</script>
+</body>
+</html>
